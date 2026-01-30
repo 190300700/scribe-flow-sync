@@ -133,12 +133,16 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => ({
   updateRawText: (text) => {
     let { currentProject, mode, type } = get();
 
+    // If no project exists, create one first
     if (!currentProject) {
-      if (!mode || !type) return;
+      if (!mode || !type) {
+        console.warn('Cannot update raw text: mode or type not set');
+        return;
+      }
       currentProject = createEmptyProject(mode, type);
-      set({ currentProject });
     }
 
+    // Update the project with the new text
     set({
       currentProject: {
         ...currentProject,
