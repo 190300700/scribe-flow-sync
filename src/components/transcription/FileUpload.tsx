@@ -8,7 +8,7 @@ import { generateMockTranscription } from '@/lib/mockTranscription';
 export const FileUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const { setStatus, status, updateRawText, createProject, currentProject, mode, type } = useTranscriptionStore();
+  const { setStatus, status, forceSetRawText } = useTranscriptionStore();
 
   const isValidFile = (file: File) =>
     file.type.startsWith('audio/') || file.type.startsWith('video/');
@@ -40,34 +40,41 @@ export const FileUpload = () => {
     setStatus('idle');
   };
 
+  // FORCED FLOW - No conditions, no guards, always executes
   const handleProcess = async () => {
-    if (!file) return;
-    if (!mode || !type) return;
-
-    // Step 1: Create project if it doesn't exist
-    if (!currentProject) {
-      createProject();
-    }
-
-    // Step 2: Set status to processing (visible state change)
+    // Step 1: Set status to processing immediately
     setStatus('processing');
 
-    // Step 3: Simulate processing time (1.5-2.5 seconds)
-    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+    // Step 2: Simulate processing (1.5 seconds)
+    await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Step 4: Generate mock transcription
-    const transcription = generateMockTranscription(file.name);
+    // Step 3: Generate transcription
+    const transcription = generateMockTranscription(file?.name || 'archivo');
     
-    // Step 5: Save transcription to project state (this triggers re-render)
-    updateRawText(transcription);
+    // Step 4: Force set rawText (creates project internally, no conditions)
+    forceSetRawText(transcription);
 
-    // Step 6: Set status to success (triggers view switch to editor)
+    // Step 5: Set status to success
     setStatus('success');
   };
 
   return (
     <div className="p-4 space-y-4">
-      {!file ? (
+      {/* Processing indicator - ALWAYS visible when processing */}
+      {status === 'processing' && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="p-6 bg-primary/20 rounded-2xl text-center"
+        >
+          <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
+          <p className="text-2xl font-bold text-primary">PROCESANDO…</p>
+          <p className="text-sm text-muted-foreground mt-2">Generando transcripción</p>
+        </motion.div>
+      )}
+
+      {/* File upload area - only when not processing */}
+      {status !== 'processing' && !file && (
         <motion.div
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -98,7 +105,10 @@ export const FileUpload = () => {
             </div>
           </div>
         </motion.div>
-      ) : (
+      )}
+
+      {/* File selected - show process button */}
+      {status !== 'processing' && file && (
         <motion.div className="card-gradient p-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
@@ -111,24 +121,17 @@ export const FileUpload = () => {
             <div className="flex-1 truncate">
               <p className="font-medium truncate">{file.name}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={clearFile} disabled={status === 'processing'}>
+            <Button variant="ghost" size="icon" onClick={clearFile}>
               <X />
             </Button>
           </div>
 
+          {/* PROCESS BUTTON - No disabled state, always clickable */}
           <Button
             onClick={handleProcess}
-            disabled={status === 'processing'}
-            className="w-full mt-4 h-12"
+            className="w-full mt-4 h-12 btn-gradient-primary"
           >
-            {status === 'processing' ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Transcribiendo…
-              </>
-            ) : (
-              'Procesar archivo'
-            )}
+            Procesar archivo
           </Button>
         </motion.div>
       )}
