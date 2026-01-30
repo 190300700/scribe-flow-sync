@@ -38,6 +38,7 @@ interface TranscriptionStore {
   createProject: () => Project | null;
   updateRawText: (text: string) => void;
   updateProcessedText: (text: string) => void;
+  forceSetRawText: (text: string) => void; // New: forced update without conditions
   
   // Speaker actions
   addSpeaker: (speaker: Speaker) => void;
@@ -149,6 +150,20 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => ({
         rawText: text,
       },
     });
+  },
+
+  // FORCED update - always works, creates project if needed, no conditions
+  forceSetRawText: (text) => {
+    const { mode, type } = get();
+    
+    // Create a new project with the text, using defaults if mode/type not set
+    const project = createEmptyProject(
+      mode || 'preloaded',
+      type || 'interview'
+    );
+    project.rawText = text;
+    
+    set({ currentProject: project });
   },
 
   updateProcessedText: (text) => {

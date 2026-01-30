@@ -100,14 +100,13 @@ export const TranscriptionView = ({ onBack, onNavigate }: TranscriptionViewProps
 
       {/* Main content area */}
       <main className="flex-1 overflow-auto pb-40">
-        {/* Show FileUpload only when: preloaded mode AND no transcription text yet */}
-        {mode === 'preloaded' && !currentProject?.rawText && (
-          <FileUpload />
-        )}
-        
-        {/* Show Editor when: live mode OR when there's transcription text (success state) */}
-        {(mode === 'live' || (currentProject?.rawText && currentProject.rawText.length > 0)) && (
+        {/* SIMPLE RENDER LOGIC: Only check if rawText exists */}
+        {currentProject?.rawText && currentProject.rawText.length > 0 ? (
+          // Show editor when there's text
           <TranscriptionEditor />
+        ) : (
+          // Show file upload when no text
+          <FileUpload />
         )}
       </main>
 
