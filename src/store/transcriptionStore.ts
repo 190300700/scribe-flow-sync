@@ -35,7 +35,7 @@ interface TranscriptionStore {
   updateCurrentTime: (time: number) => void;
   
   // Project actions
-  createProject: () => void;
+  createProject: () => Project | null;
   updateRawText: (text: string) => void;
   updateProcessedText: (text: string) => void;
   
@@ -54,7 +54,10 @@ interface TranscriptionStore {
 
 const generateId = () => Math.random().toString(36).substring(2, 15);
 
-const createEmptyProject = (mode: TranscriptionMode, type: TranscriptionType): Project => ({
+const createEmptyProject = (
+  mode: TranscriptionMode,
+  type: TranscriptionType
+): Project => ({
   id: generateId(),
   mode,
   type,
@@ -63,10 +66,11 @@ const createEmptyProject = (mode: TranscriptionMode, type: TranscriptionType): P
   speakers: [],
   newsNotes: type === 'news' ? [] : undefined,
   createdAt: new Date(),
-  autoDeleteAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // 2 weeks
+  autoDeleteAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
 });
 
 export const useTranscriptionStore = create<TranscriptionStore>((set, get) => ({
+  // Initial state
   mode: null,
   type: null,
   status: 'idle',
@@ -77,135 +81,165 @@ export const useTranscriptionStore = create<TranscriptionStore>((set, get) => ({
   currentNote: null,
   isNoteActive: false,
 
+  // Selection
   setMode: (mode) => set({ mode }),
-  
   setType: (type) => set({ type }),
-  
   setStatus: (status) => set({ status }),
-  
+
+  // Recording
   startRecording: () => {
     const { mode, type, currentProject } = get();
     if (!mode || !type) return;
-    
+
     if (!currentProject) {
-      set({ 
-        currentProject: createEmptyProject(mode, type),
+      const project = createEmptyProject(mode, type);
+      set({
+        currentProject: project,
         isRecording: true,
         isPaused: false,
-        status: 'transcribing'
+        status: 'transcribing',
       });
     } else {
-      set({ isRecording: true, isPaused: false, status: 'transcribing' });
+      set({
+        isRecording: true,
+        isPaused: false,
+        status: 'transcribing',
+      });
     }
   },
-  
+
   pauseRecording: () => set({ isPaused: true }),
-  
   resumeRecording: () => set({ isPaused: false }),
-  
-  stopRecording: () => set({ 
-    isRecording: false, 
-    isPaused: false,
-    status: 'success'
-  }),
-  
+
+  stopRecording: () =>
+    set({
+      isRecording: false,
+      isPaused: false,
+      status: 'success',
+    }),
+
   updateCurrentTime: (time) => set({ currentTime: time }),
-  
+
+  // Projects
   createProject: () => {
     const { mode, type } = get();
-    if (!mode || !type) return;
-    set({ currentProject: createEmptyProject(mode, type) });
+    if (!mode || !type) return null;
+
+    const project = createEmptyProject(mode, type);
+    set({ currentProject: project });
+    return project;
   },
-  
+
   updateRawText: (text) => {
-    const { currentProject } = get();
-    if (!currentProject) return;
-    set({ 
-      currentProject: { ...currentProject, rawText: text }
+    let { currentProject, mode, type } = get();
+
+    if (!currentProject) {
+      if (!mode || !type) return;
+      currentProject = createEmptyProject(mode, type);
+      set({ currentProject });
+    }
+
+    set({
+      currentProject: {
+        ...currentProject,
+        rawText: text,
+      },
     });
   },
-  
+
   updateProcessedText: (text) => {
     const { currentProject } = get();
     if (!currentProject) return;
-    set({ 
-      currentProject: { ...currentProject, processedText: text }
+
+    set({
+      currentProject: {
+        ...currentProject,
+        processedText: text,
+      },
     });
   },
-  
+
+  // Speakers
   addSpeaker: (speaker) => {
     const { currentProject } = get();
     if (!currentProject) return;
+
     set({
       currentProject: {
         ...currentProject,
-        speakers: [...currentProject.speakers, speaker]
-      }
+        speakers: [...currentProject.speakers, speaker],
+      },
     });
   },
-  
+
   updateSpeaker: (id, name) => {
     const { currentProject } = get();
     if (!currentProject) return;
+
     set({
       currentProject: {
         ...currentProject,
-        speakers: currentProject.speakers.map(s => 
+        speakers: currentProject.speakers.map((s) =>
           s.id === id ? { ...s, name, isIdentified: true } : s
-        )
-      }
+        ),
+      },
     });
   },
-  
+
+  // News notes
   startNote: () => {
     const { currentTime, currentProject } = get();
     if (!currentProject) return;
-    
+
     const newNote: NewsNote = {
       id: generateId(),
       startTime: currentTime,
       segments: [],
     };
-    
-    set({ 
+
+    set({
       currentNote: newNote,
-      isNoteActive: true
+      isNoteActive: true,
     });
   },
-  
+
   endNote: () => {
     const { currentNote, currentTime, currentProject } = get();
     if (!currentNote || !currentProject) return;
-    
+
     const completedNote = {
       ...currentNote,
-      endTime: currentTime
+      endTime: currentTime,
     };
-    
+
     set({
       currentProject: {
         ...currentProject,
-        newsNotes: [...(currentProject.newsNotes || []), completedNote]
+        newsNotes: [...(currentProject.newsNotes || []), completedNote],
       },
       currentNote: null,
-      isNoteActive: false
+      isNoteActive: false,
     });
   },
-  
-  reset: () => set({
-    mode: null,
-    type: null,
-    status: 'idle',
-    currentProject: null,
-    isRecording: false,
-    isPaused: false,
-    currentTime: 0,
-    currentNote: null,
-    isNoteActive: false,
-  }),
-  
-  resetSelection: () => set({
-    mode: null,
-    type: null,
-  }),
+
+  // Reset
+  reset: () =>
+    set({
+      mode: null,
+      type: null,
+      status: 'idle',
+      currentProject: null,
+      isRecording: false,
+      isPaused: false,
+      currentTime: 0,
+      currentNote: null,
+      isNoteActive: false,
+    }),
+
+  resetSelection: () =>
+    set({
+      mode: null,
+      type: null,
+    }),
 }));
+
