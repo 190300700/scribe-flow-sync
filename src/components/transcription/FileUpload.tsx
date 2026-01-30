@@ -7,7 +7,7 @@ import { useTranscriptionStore } from '@/store/transcriptionStore';
 export const FileUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const { setStatus, status, currentProject, updateRawText } = useTranscriptionStore();
+  const { setStatus, status, currentProject, updateRawText, createProject } = useTranscriptionStore();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -50,6 +50,11 @@ export const FileUpload = () => {
 
   const handleProcess = async () => {
     if (!file) return;
+    
+    // Ensure project exists before processing
+    if (!currentProject) {
+      createProject();
+    }
     
     setStatus('processing');
     
