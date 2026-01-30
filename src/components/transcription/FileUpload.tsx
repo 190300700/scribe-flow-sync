@@ -8,7 +8,7 @@ import { generateMockTranscription } from '@/lib/mockTranscription';
 export const FileUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const { setStatus, status, updateRawText, createProject, currentProject } = useTranscriptionStore();
+  const { setStatus, status, updateRawText, createProject, currentProject, mode, type } = useTranscriptionStore();
 
   const isValidFile = (file: File) =>
     file.type.startsWith('audio/') || file.type.startsWith('video/');
@@ -42,23 +42,26 @@ export const FileUpload = () => {
 
   const handleProcess = async () => {
     if (!file) return;
+    if (!mode || !type) return;
 
-    // Ensure project exists before processing
+    // Step 1: Create project if it doesn't exist
     if (!currentProject) {
       createProject();
     }
 
+    // Step 2: Set status to processing (visible state change)
     setStatus('processing');
 
-    // Simulate processing time (1.5-3 seconds)
-    const processingTime = 1500 + Math.random() * 1500;
-    
-    await new Promise(resolve => setTimeout(resolve, processingTime));
+    // Step 3: Simulate processing time (1.5-2.5 seconds)
+    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
 
-    // Generate mock transcription
+    // Step 4: Generate mock transcription
     const transcription = generateMockTranscription(file.name);
     
+    // Step 5: Save transcription to project state (this triggers re-render)
     updateRawText(transcription);
+
+    // Step 6: Set status to success (triggers view switch to editor)
     setStatus('success');
   };
 
