@@ -13,16 +13,20 @@ export const ExportPanel = () => {
 
   const textToExport = currentProject?.processedText || currentProject?.rawText || '';
 
-  // Format text for WhatsApp
+  // Format text for WhatsApp - maintains readable format with proper spacing
   const formatForWhatsApp = (text: string) => {
-    // Add proper line breaks and formatting for WhatsApp readability
     return text
-      .replace(/##\s*(\w+)/g, '*[?? $1]*') // Bold unknown words
-      .replace(/#([^#]+)#/g, '_[$1]_') // Italicize timestamps
-      .replace(/^(Personaje\s*\d+|[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+):/gm, '*$1:*') // Bold speakers
+      // Bold speaker names (lines ending with :)
+      .replace(/^([A-Za-zÁÉÍÓÚÑáéíóúñ\s]+):$/gm, '*$1:*')
+      // Bold unknown word placeholders
+      .replace(/##([^\s#]+)\s*(#[^#]+#)/g, '*[?? $1]* _$2_')
+      // Italicize speaker definition placeholders
+      .replace(/#(Definir personaje[^#]+)#/g, '_[$1]_')
+      // Clean up multiple empty lines but keep paragraph structure
       .split('\n')
-      .filter(line => line.trim())
-      .join('\n\n'); // Double line breaks for readability
+      .map(line => line.trim())
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n');
   };
 
   const handleCopy = async () => {

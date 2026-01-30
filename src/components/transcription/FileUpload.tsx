@@ -3,12 +3,12 @@ import { motion } from 'framer-motion';
 import { Upload, FileAudio, FileVideo, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTranscriptionStore } from '@/store/transcriptionStore';
-import { supabase } from '@/lib/supabase';
+import { generateMockTranscription } from '@/lib/mockTranscription';
 
 export const FileUpload = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const { setStatus, status, updateRawText } = useTranscriptionStore();
+  const { setStatus, status, updateRawText, createProject, currentProject } = useTranscriptionStore();
 
   const isValidFile = (file: File) =>
     file.type.startsWith('audio/') || file.type.startsWith('video/');
@@ -43,22 +43,22 @@ export const FileUpload = () => {
   const handleProcess = async () => {
     if (!file) return;
 
-    setStatus('processing');
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const { data, error } = await supabase.functions.invoke('transcribe', {
-      body: formData,
-    });
-
-    if (error) {
-      console.error(error);
-      setStatus('error');
-      return;
+    // Ensure project exists before processing
+    if (!currentProject) {
+      createProject();
     }
 
-    updateRawText(data.text || '');
+    setStatus('processing');
+
+    // Simulate processing time (1.5-3 seconds)
+    const processingTime = 1500 + Math.random() * 1500;
+    
+    await new Promise(resolve => setTimeout(resolve, processingTime));
+
+    // Generate mock transcription
+    const transcription = generateMockTranscription(file.name);
+    
+    updateRawText(transcription);
     setStatus('success');
   };
 
